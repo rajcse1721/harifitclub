@@ -4,7 +4,6 @@ import { BOOKING_PRICES, TIME_SLOTS } from "../data/constants";
 const ONLINE_CLASS = "Live Online Class";
 const HOME_VISIT_CLASS = "Home Visit";
 const MEETING_PROVIDERS = ["Zoom", "Teams"];
-const ADMIN_WHATSAPP_NUMBER = "917764056313";
 
 const getClassDates = (date, slot) => {
   const [time, meridiem] = slot.split(" ");
@@ -76,23 +75,6 @@ const buildBookingMessage = ({
     .filter(Boolean)
     .join("\n");
 
-const formatWhatsAppNumber = (phone) => {
-  const digits = phone.replace(/\D/g, "").replace(/^0+/, "");
-  return digits.startsWith("91") ? digits : `91${digits}`;
-};
-
-const buildWhatsAppUrl = (phone, message) =>
-  `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-
-const buildEmailUrl = (email, message) => {
-  const params = new URLSearchParams({
-    subject: "Hari Fit Club booking confirmation",
-    body: message,
-  });
-
-  return `mailto:${email}?${params.toString()}`;
-};
-
 const loadRazorpayCheckout = () =>
   new Promise((resolve, reject) => {
     if (window.Razorpay) {
@@ -153,8 +135,7 @@ export default function Booking({ selectedClass, setSelectedClass }) {
   const [homeLocation, setHomeLocation] = useState("");
   const [meetingProvider, setMeetingProvider] = useState("Zoom");
   const [calendarUrl, setCalendarUrl] = useState("");
-  const [whatsAppMessage, setWhatsAppMessage] = useState("");
-  const [emailUrl, setEmailUrl] = useState("");
+  const [adminNotice, setAdminNotice] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
 
@@ -218,8 +199,7 @@ export default function Booking({ selectedClass, setSelectedClass }) {
 
   const resetConfirmationActions = () => {
     setCalendarUrl("");
-    setWhatsAppMessage("");
-    setEmailUrl("");
+    setAdminNotice("");
   };
 
   const verifyMember = async () => {
@@ -251,20 +231,26 @@ export default function Booking({ selectedClass, setSelectedClass }) {
       ? await createOnlineMeeting(booking)
       : { status: "confirmed", joinUrl: "", message: "" };
 
-    const message = buildBookingMessage({
-      ...booking,
-      meetingUrl: meeting.joinUrl,
-      paymentStatus: paymentInfo.status,
-    });
-
-    saveBooking({
+    const bookingRecord = {
       ...booking,
       meetingStatus: meeting.status,
       meetingUrl: meeting.joinUrl,
       paymentStatus: paymentInfo.status,
       razorpayPaymentId: paymentInfo.razorpayPaymentId || "",
       razorpayOrderId: paymentInfo.razorpayOrderId || "",
-    });
+    };
+
+    saveBooking(bookingRecord);
+
+    try {
+      await requestJson("/.netlify/functions/send-booking-email", {
+        booking: bookingRecord,
+        message: buildBookingMessage(bookingRecord),
+      });
+      setAdminNotice("Admin/trainer has been notified by email.");
+    } catch (error) {
+      setAdminNotice(`Booking saved, but admin email failed: ${error.message}`);
+    }
 
     setSuccess(
       `${booking.selectedClass} booked for ${booking.name} on ${booking.date} at ${booking.slot}. Payment status: ${paymentInfo.status}.`,
@@ -278,8 +264,6 @@ export default function Booking({ selectedClass, setSelectedClass }) {
           })
         : "",
     );
-    setWhatsAppMessage(message);
-    setEmailUrl(booking.email ? buildEmailUrl(booking.email, message) : "");
     setLoading(false);
   };
 
@@ -350,16 +334,6 @@ export default function Booking({ selectedClass, setSelectedClass }) {
     }
 
     await startRazorpayPayment(booking);
-  };
-
-  const sendWhatsAppConfirmations = () => {
-    const clientNumber = formatWhatsAppNumber(phone);
-    const numbers = Array.from(new Set([clientNumber, ADMIN_WHATSAPP_NUMBER]));
-
-    numbers.forEach((number, index) => {
-      const url = buildWhatsAppUrl(number, whatsAppMessage);
-      setTimeout(() => window.open(url, "_blank", "noopener,noreferrer"), index * 700);
-    });
   };
 
   const fillCurrentLocation = () => {
@@ -639,6 +613,7 @@ export default function Booking({ selectedClass, setSelectedClass }) {
           </button>
 
           {success && <div style={successStyle}>{success}</div>}
+          {adminNotice && <div style={noticeStyle}>{adminNotice}</div>}
 
           {calendarUrl && (
             <a
@@ -654,37 +629,6 @@ export default function Booking({ selectedClass, setSelectedClass }) {
             >
               Add Online Class to Calendar
             </a>
-          )}
-
-          {(whatsAppMessage || emailUrl) && (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))",
-                gap: 10,
-                marginTop: 12,
-              }}
-            >
-              {whatsAppMessage && (
-                <button
-                  className="btn btn-outline"
-                  type="button"
-                  onClick={sendWhatsAppConfirmations}
-                  style={{ justifyContent: "center" }}
-                >
-                  Send WhatsApp to Client & Admin
-                </button>
-              )}
-              {emailUrl && (
-                <a
-                  className="btn btn-outline"
-                  href={emailUrl}
-                  style={{ justifyContent: "center" }}
-                >
-                  Send Email
-                </a>
-              )}
-            </div>
           )}
         </div>
       </div>
