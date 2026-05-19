@@ -48,7 +48,8 @@ export const PROGRAMS = [
   },
 ];
 
-export const CLASSES = [
+// export const CLASSES = [
+  {
   {
     icon: "🎯",
     iconBg: "#2a1000",
@@ -62,6 +63,7 @@ export const CLASSES = [
       "Flexible scheduling",
     ],
     type: "Personal Training",
+  },
   },
   {
     icon: "📱",
