@@ -48,8 +48,7 @@ export const PROGRAMS = [
   },
 ];
 
-// export const CLASSES = [
-  {
+export const CLASSES = [
   {
     icon: "🎯",
     iconBg: "#2a1000",
@@ -63,7 +62,6 @@ export const PROGRAMS = [
       "Flexible scheduling",
     ],
     type: "Personal Training",
-  },
   },
   {
     icon: "📱",
@@ -108,6 +106,15 @@ export const TIME_SLOTS = [
   { time: "8:00 PM" },
   { time: "9:00 PM" },
 ];
+
+export const BOOKING_PRICES = {
+  "Personal Training": 799,
+  "Live Online Class": 299,
+  "Home Visit": 999,
+  Strength: 399,
+  HIIT: 399,
+  Yoga: 299,
+};
 
 export const PLANS = [
   {
